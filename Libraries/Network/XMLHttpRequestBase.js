@@ -26,6 +26,7 @@ class XMLHttpRequestBase {
   DONE: number;
 
   onreadystatechange: ?Function;
+  ontimeout: ?Function;
   onload: ?Function;
   upload: any;
   readyState: number;
@@ -56,6 +57,7 @@ class XMLHttpRequestBase {
     this.DONE = 4;
 
     this.onreadystatechange = null;
+    this.ontimeout = null;
     this.onload = null;
     this.upload = undefined; /* Upload not supported yet */
     this.timeout = null;
@@ -120,10 +122,6 @@ class XMLHttpRequestBase {
       this.status = status;
       this.setResponseHeaders(responseHeaders);
       this.setReadyState(this.HEADERS_RECEIVED);
-
-      // If a timeout was set, the timeout will be cleared
-      // once a response is received (transit time not counted)
-      this._clearTimeout();
     }
   }
 
@@ -146,6 +144,9 @@ class XMLHttpRequestBase {
       this._clearSubscriptions();
       this._requestId = null;
       this.setReadyState(this.DONE);
+      // If a timeout was set, the timeout will be cleared
+      // once a response is complete
+      this._clearTimeout();
     }
   }
 
@@ -216,7 +217,12 @@ class XMLHttpRequestBase {
   // called by setTimeout, aborts the request
   _checkTimeout(): void {
     if(this.readyState !== this.DONE) {
+      // timed-out
       this.abort();
+      if(this.ontimeout != null) {
+        // should send event, but not proccessing event, leaving empty
+        this.ontimeout(null);
+      }
     }
   }
 
