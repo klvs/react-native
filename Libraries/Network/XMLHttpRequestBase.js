@@ -47,6 +47,7 @@ class XMLHttpRequestBase {
   _aborted: boolean;
   _lowerCaseResponseHeaders: Object;
 
+
   constructor() {
     this.UNSENT = 0;
     this.OPENED = 1;
@@ -57,11 +58,14 @@ class XMLHttpRequestBase {
     this.onreadystatechange = null;
     this.onload = null;
     this.upload = undefined; /* Upload not supported yet */
+    this.timeout = null;
 
     this._reset();
     this._method = null;
     this._url = null;
     this._aborted = false;
+    this._timeoutId = null;
+    this._checkTimeout = this._checkTimeout.bind(this);
   }
 
   _reset() {
@@ -71,6 +75,7 @@ class XMLHttpRequestBase {
     this.status = 0;
 
     this._requestId = null;
+    this._timeoutId = null;
 
     this._headers = {};
     this._sent = false;
@@ -115,6 +120,10 @@ class XMLHttpRequestBase {
       this.status = status;
       this.setResponseHeaders(responseHeaders);
       this.setReadyState(this.HEADERS_RECEIVED);
+
+      // If a timeout was set, the timeout will be cleared
+      // once a response is received (transit time not counted)
+      this._clearTimeout();
     }
   }
 
@@ -199,6 +208,23 @@ class XMLHttpRequestBase {
     }
     this._sent = true;
     this.sendImpl(this._method, this._url, this._headers, data);
+    if(this.timeout != null) {
+      this._timeoutId =  setTimeout(this._checkTimeout, this.timeout);
+    }
+  }
+
+  // called by setTimeout, aborts the request
+  _checkTimeout(): void {
+    if(this.readyState == this.OPENED) {
+      this.abort();
+    }
+  }
+
+  // if a timeout is set, cancel the timeout call
+  _clearTimeout(): void {
+    if(this._timeoutId != null) {
+      clearTimeout(this._timeoutId);
+    }
   }
 
   abort(): void {
