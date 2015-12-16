@@ -215,7 +215,7 @@ class XMLHttpRequestBase {
 
   // called by setTimeout, aborts the request
   _checkTimeout(): void {
-    if(this.readyState == this.OPENED) {
+    if(this.readyState !== this.DONE) {
       this.abort();
     }
   }
